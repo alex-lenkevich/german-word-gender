@@ -1,0 +1,17 @@
+{
+  "name": "german-word-gender",
+  "scripts": {
+    "postdeploy": "sbt run"
+  },
+  "env": {
+    "MONGODB_URI": {
+      "required": true
+    },
+    "BOT_TOKEN": "723653419:AAFZEfp_DoPaveu5JMs1BNtoEaoY5X9UvgA"
+  },
+  "formation": {},
+  "addons": [
+    "mongolab"
+  ],
+  "buildpacks": []
+}
