@@ -21,8 +21,14 @@ object Server extends JsonSupport with App with ErrorAccumulatingCirceSupport {
 
   val route = (path("update") & post & entity(as[Update])) { update =>
     val word = update.message.text.capitalize
-    bablaClient.requestGender(word).map {_.map(_.definedArticle)}.flatMap { x =>
-      telegramClient.sendMessage(update.message.chat, s"${x.getOrElse("???")} $word")
+    if (word == "/start") {
+      telegramClient.sendMessage(update.message.chat, s"Herzlich willkommen. Send me a noun and I'll suggest its gender.")
+    } else {
+      bablaClient.requestGender(word).map {
+        _.map(_.definedArticle)
+      }.flatMap { x =>
+        telegramClient.sendMessage(update.message.chat, s"${x.getOrElse("???")} $word")
+      }
     }.onComplete {
       case Success(value) =>
         println(s"Message processed $value")
