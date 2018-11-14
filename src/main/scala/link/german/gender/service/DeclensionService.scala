@@ -121,7 +121,7 @@ class DeclensionService extends Service {
 
   override def process[T](msg: String, sendBack: String => Future[T])(implicit ec: ExecutionContext): Future[T] = Future {
     msg.split(Regex).toList match {
-      case pronoun :: declension :: Nil => personalPronoun2(pronoun.to)(declension.toUpperCase)
+      case pronoun :: declension :: Nil => personalPronoun2(pronoun)(declension.toUpperCase)
       case pronoun :: gender :: declension :: Nil => personalPronoun3(pronoun)(declension.toUpperCase)(gender.toUpperCase)
     }
   }.flatMap(sendBack)
