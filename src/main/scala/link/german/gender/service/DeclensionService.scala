@@ -8,7 +8,7 @@ class DeclensionService extends Service {
   val Genders = Seq("M", "F", "N", "P")
   val Regex = "(\\(\\)|\\s)*(->|'| (to|in) | )(\\(\\)|\\s)*"
 
-  val personalPronoun2: Map[String, Map[String, String]] = Seq(
+  val personalPronoun2: Seq[(String, String, String)] = Seq(
     "ich" -> Seq("ich",       "mich"         ,"mir",           "meiner"),
     "du"  -> Seq("du",        "dich"         ,"dir",           "deiner"),
     "Sie" -> Seq("Sie",       "Sie"          ,"Ihnen",         "Ihrer"),
@@ -19,12 +19,11 @@ class DeclensionService extends Service {
     "ihr" -> Seq("ihr",       "euch"         ,"euch",          "euer"),
     "Sie" -> Seq("Sie",       "Sie"          ,"Ihnen",         "Ihrer"),
     "sie" -> Seq("sie",       "sie"          ,"ihnen",         "ihrer")
-  ).map {
-    case (k, v) =>
-      k -> (Declensions zip v).toMap
-  }.toMap
+  ).flatMap {
+    case (k, v) => (Declensions zip v).map{case (d, x) => (k, d, x)}
+  }
 
-  val personalPronoun3: Map[String, Map[String, Map[String, String]]] = Seq(
+  val personalPronoun3: Seq[(String, String, String, String)] = Seq(
 
     "das" -> Seq(
      /*                 m*/  /*f*/  /*n*/  /*M*/
@@ -113,16 +112,34 @@ class DeclensionService extends Service {
       /*Dativ*/      "-em" , "-er", "-em", "-en",
       /*Genetiv*/    "-en" , "-er", "-en", "-er"
     )
-  ).map {
-    case (k, v) => k -> (Declensions zip v.sliding(4, 4).toList.map(Genders zip _))
-  }.toMap.mapValues(_.toMap.mapValues(_.toMap))
+  ).flatMap {
+    case (k, v) =>
+      for {
+        t2 <- (Declensions zip v.sliding(4, 4).toList).toList
+        t3 <- (Genders zip t2._2).toList
+      } yield {
+        (k, t2._1, t3._1, t3._2)
+      }
+  }
 
   override def applicable(msg: String): Boolean = msg.matches(".*" + Regex + ".*")
 
   override def process[T](msg: String, sendBack: String => Future[T])(implicit ec: ExecutionContext): Future[T] = Future {
     msg.split(Regex).toList match {
-      case pronoun :: declension :: Nil => personalPronoun2(pronoun)(declension.toUpperCase)
-      case pronoun :: gender :: declension :: Nil => personalPronoun3(pronoun)(declension.toUpperCase)(gender.toUpperCase)
+      case pronoun :: declension :: Nil =>
+        personalPronoun2.collect {
+          case (p, d, v) if (p == pronoun || pronoun == "*") &&
+            (d == declension.toUpperCase || declension == "*") =>
+            s"$p in $d = $v"
+        }
+      case pronoun :: gender :: declension :: Nil =>
+        personalPronoun3.collect {
+        case (p, d, g, v) if (p == pronoun || pronoun == "*") &&
+          (d == declension.toUpperCase || declension == "*") &&
+          (g == gender.toUpperCase || gender == "*") =>
+          s"$p'$g in $d = $v"
+      }
     }
-  }.flatMap(sendBack)
+  }.map(_.mkString("\n")).
+    flatMap(sendBack)
 }
