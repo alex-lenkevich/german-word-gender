@@ -10,7 +10,7 @@ import io.circe.syntax._
 import scala.concurrent.ExecutionContext
 
 
-class Client(implicit system: ActorSystem) extends JsonSupport {
+private[telegram] class Client(implicit system: ActorSystem) extends JsonSupport {
 
   lazy val BotToken: String = System.getenv("BOT_TOKEN")
 

@@ -6,6 +6,8 @@ scalaVersion := "2.12.7"
 
 enablePlugins(JavaAppPackaging)
 
+mainClass in (Compile, run) := Some("link.german.gender.telegram.Server")
+
 libraryDependencies ++= Seq(
   "org.mongodb.scala" %% "mongo-scala-driver" % "2.4.2",
   "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.22",

@@ -6,7 +6,7 @@ import org.htmlcleaner.HtmlCleaner
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class BablaClient {
+object BablaClient {
 
   def requestGender(word: String)(implicit ec: ExecutionContext): Future[Option[Gender]] = Future {
     val cleaner = new HtmlCleaner

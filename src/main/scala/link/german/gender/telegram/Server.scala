@@ -5,8 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
-import io.circe.generic.AutoDerivation
-import link.german.gender.BablaClient
+import link.german.gender.service.RouterService
 
 import scala.util.{Failure, Success}
 
@@ -16,19 +15,15 @@ object Server extends JsonSupport with App with ErrorAccumulatingCirceSupport {
   implicit val materializer = ActorMaterializer()
   // needed for the future flatMap/onComplete in the end
   implicit val executionContext = system.dispatcher
-  val bablaClient = new BablaClient
-  val telegramClient = new Client()
+  private val telegramClient = new Client()
+  private val servcieRouter = new RouterService()
 
   val route = (path("update") & post & entity(as[Update])) { update =>
     val word = update.message.text.capitalize
     if (word == "/start") {
       telegramClient.sendMessage(update.message.chat, s"Herzlich willkommen. Send me a noun and I'll suggest its gender.")
     } else {
-      bablaClient.requestGender(word).map {
-        _.map(_.definedArticle)
-      }.flatMap { x =>
-        telegramClient.sendMessage(update.message.chat, s"${x.getOrElse("???")} $word")
-      }
+      servcieRouter.process(word, answer => telegramClient.sendMessage(update.message.chat, answer))
     }.onComplete {
       case Success(value) =>
         println(s"Message processed $value")
