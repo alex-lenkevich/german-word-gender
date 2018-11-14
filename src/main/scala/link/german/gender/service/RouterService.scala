@@ -8,6 +8,8 @@ class RouterService extends Service {
   override def applicable(msg: String): Boolean = true
 
   override def process[T](msg: String, sendBack: String => Future[T])(implicit ec: ExecutionContext): Future[T] = {
-    services.find(_.applicable(msg)).get.process(msg, sendBack)
+    Future {
+      services.find(_.applicable(msg))
+    }.flatMap(_.fold[Future[T]](Future.failed(new RuntimeException("Can't find service")))(_.process(msg, sendBack)))
   }
 }

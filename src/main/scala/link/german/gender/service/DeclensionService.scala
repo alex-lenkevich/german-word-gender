@@ -6,6 +6,7 @@ class DeclensionService extends Service {
 
   val Declensions = Seq("N", "A", "D", "G")
   val Genders = Seq("M", "F", "N", "P")
+  val Regex = "(\\(\\)|\\s)*(->|'| (to|in) | )(\\(\\)|\\s)*"
 
   val personalPronoun2: Map[String, Map[String, String]] = Seq(
     "ich" -> Seq("ich",       "mich"         ,"mir",           "meiner"),
@@ -104,17 +105,24 @@ class DeclensionService extends Service {
       /*Akkusativ */ "Ihren" , "Ihre" , "Ihr"   , "Ihre",
       /*Dativ*/      "Ihrem" , "Ihrer", "Ihrem" , "Ihren",
       /*Genetiv*/    "Ihres" , "Ihrer", "Ihres" , "Ihrer"
+    ),
+    "adj" -> Seq(
+      /*                m*/  /*f*/  /*n*/  /*M*/
+      /*Nominative*/ "-er" , "-e" , "-es", "-e",
+      /*Akkusativ */ "-en" , "-e" , "-es", "-e",
+      /*Dativ*/      "-em" , "-er", "-em", "-en",
+      /*Genetiv*/    "-en" , "-er", "-en", "-er"
     )
   ).map {
     case (k, v) => k -> (Declensions zip v.sliding(4, 4).toList.map(Genders zip _))
   }.toMap.mapValues(_.toMap.mapValues(_.toMap))
 
-  override def applicable(msg: String): Boolean = personalPronoun2.contains(msg.split(" ")(0))
+  override def applicable(msg: String): Boolean = msg.matches(".*" + Regex + ".*")
 
   override def process[T](msg: String, sendBack: String => Future[T])(implicit ec: ExecutionContext): Future[T] = Future {
-    msg.split(" ").toList match {
-      case pronoun :: declension :: Nil => personalPronoun2(pronoun)(declension)
-      case pronoun :: declension :: gender :: Nil => personalPronoun3(pronoun)(declension)(gender)
+    msg.split(Regex).toList match {
+      case pronoun :: declension :: Nil => personalPronoun2(pronoun)(declension.toUpperCase)
+      case pronoun :: gender :: declension :: Nil => personalPronoun3(pronoun)(declension.toUpperCase)(gender.toUpperCase)
     }
   }.flatMap(sendBack)
 }
