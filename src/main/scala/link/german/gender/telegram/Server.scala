@@ -19,7 +19,7 @@ object Server extends JsonSupport with App with ErrorAccumulatingCirceSupport {
   private val servcieRouter = new RouterService()
 
   val route = (path("update") & post & entity(as[Update])) { update =>
-    val word = update.message.text.capitalize
+    val word = update.message.text
     if (word == "/start") {
       telegramClient.sendMessage(update.message.chat, s"Herzlich willkommen. Send me a noun and I'll suggest its gender.")
     } else {
