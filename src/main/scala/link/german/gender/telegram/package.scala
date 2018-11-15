@@ -6,6 +6,6 @@ package object telegram {
   case class Message(chat: Chat, text: String)
   case class Chat(id: Long)
 
-  case class SendMessage(chatId: Long, text: String)
+  case class SendMessage(chatId: Long, text: String, parseMode: String = "Markdown")
 
 }

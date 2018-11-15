@@ -130,16 +130,37 @@ class DeclensionService extends Service {
         personalPronoun2.collect {
           case (p, d, v) if (p == pronoun || pronoun == "*") &&
             (d == declension.toUpperCase || declension == "*") =>
-            s"$p in $d = $v"
+            ("", p, d, v)
         }
       case pronoun :: gender :: declension :: Nil =>
         personalPronoun3.collect {
         case (p, d, g, v) if (p == pronoun || pronoun == "*") &&
           (d == declension.toUpperCase || declension == "*") &&
           (g == gender.toUpperCase || gender == "*") =>
-          s"$p'$g in $d = $v"
+          (p, g, d, v)
       }
     }
-  }.map(_.mkString("\n")).
-    flatMap(sendBack)
+  }.map(print3dimension).flatMap(sendBack)
+
+  def print3dimension(data: Seq[(String, String, String, String)]) = {
+    data.groupBy(_._1).
+      mapValues { _.map {case (_, column, row, value) => (column, row, value) } }.
+      mapValues { table =>
+        val labelWidth = table.map(_._2.length).max
+        val columnWidth = table.map(_._3.length).max
+        table.groupBy(_._2).
+          mapValues { _.map {case (_, row, value) => (row, value) } }.
+          map { case (column, row) =>
+            val rowData = row.map { case (_, value) =>
+              value.padTo(columnWidth, " ").mkString("")
+            }
+            (column.padTo(labelWidth, " ") ++ rowData).
+            mkString(s"| ", " | ", " |")
+        }.mkString("\n")
+      }.map {
+        case (title, table) => s"*$title*\n```\n$table\n```"
+      }.mkString("\n\n")
+
+  }
+
 }
