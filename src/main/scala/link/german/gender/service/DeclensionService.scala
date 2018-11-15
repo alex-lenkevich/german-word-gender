@@ -122,6 +122,8 @@ class DeclensionService extends Service {
       }
   }
 
+  val Pronouns = personalPronoun2.map(_._1) ++ personalPronoun3.map(_._1)
+
   override def applicable(msg: String): Boolean = msg.matches(".*" + Regex + ".*")
 
   override def process[T](msg: String, sendBack: String => Future[T])(implicit ec: ExecutionContext): Future[T] = Future {
@@ -140,7 +142,18 @@ class DeclensionService extends Service {
           (p, g, d, v)
       }
     }
-  }.map(print3dimension).flatMap(sendBack)
+  }.map(data => {
+    val counts = Seq(
+      data.map(_._1).toSet.size,
+      data.map(_._2).toSet.size,
+      data.map(_._3).toSet.size,
+      Int.MaxValue
+    )
+    val listValues = data.map(x => List(x._1, x._2, x._3, x._4).zipWithIndex)
+    val ordered = listValues.map(_.sortBy(x => counts(x._2)).map(_._1))
+    ordered.map(x => (x(0), x(1), x(2), x(3)))
+  }).
+    map(print3dimension).flatMap(sendBack)
 
   def print3dimension(data: Seq[(String, String, String, String)]) = {
     data.groupBy(_._1).
@@ -154,13 +167,30 @@ class DeclensionService extends Service {
             val rowData = row.map { case (_, value) =>
               value.padTo(columnWidth, " ").mkString("")
             }
-            (column.padTo(labelWidth, " ") ++ rowData).
-            mkString(s"| ", " | ", " |")
-        }.mkString("\n")
+            (column.padTo(labelWidth, " ").mkString("") +: rowData).
+              mkString(s"| ", " | ", " |")
+          }.mkString("\n")
       }.map {
         case (title, table) => s"*$title*\n```\n$table\n```"
       }.mkString("\n\n")
 
   }
+//
+//  def print3dimension(data: Seq[(String, String, String, String)], xAxis: Seq[String], yAxis: Seq[String], zAxis: Seq[String]) = {
+//    zAxis.map { zVal =>
+//      zVal -> data.filter(_._1 == zVal).map{ case (_, yVal, xVal, value) => (yVal, xVal, value) }
+//    }.filterNot(_._2.isEmpty).map { case (zVal, table) =>
+//      val labelWidth = table.map(_._1.length).max
+//      val columnWidth = xAxis.map(xVal => xVal -> table.filter(_._2 == xVal)).filterNot(_._2.isEmpty).map(x => x._1 -> x._2.map(_._3.length).max).toMap
+//      val tableText = yAxis.map { yVal =>
+//        val row = table.filter(_._1 == yVal) map { case (_, xVal, value) => (xVal, value) }
+//        val rowLabel = yVal.padTo(labelWidth, " ")
+//        val rowValues = xAxis.map(xVal => row.filter(_._1 == xVal).mkString(", ").padTo(columnWidth(xVal), " "))
+//        (rowLabel ++ rowValues).mkString(s"| ", " | ", " |")
+//      }.mkString("\n")
+//      s"*$zVal*\n```\n$tableText\n```"
+//    }.mkString("\n\n")
+//
+//  }
 
 }
