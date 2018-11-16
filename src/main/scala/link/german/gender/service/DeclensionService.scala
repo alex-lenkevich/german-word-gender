@@ -128,17 +128,18 @@ class DeclensionService extends Service {
   override def applicable(msg: String): Boolean = msg.matches(".*" + Regex + ".*")
 
   override def process[T](msg: String, sendBack: String => Future[T])(implicit ec: ExecutionContext): Future[T] = Future {
-    msg.split(Regex).toList match {
+    msg.trim.split(Regex).toList match {
       case pronoun :: declension :: Nil =>
         PersonalPronoun2.collect {
           case (p, d, v) if
-            (p.substring(0, 1) == pronoun.toLowerCase.substring(0, 1) || pronoun == "*") &&
+            (p == pronoun || pronoun == "*") &&
             (d.substring(0, 1) == declension.toLowerCase.substring(0, 1) || declension == "*") =>
             ("", p, d, v)
         }
       case pronoun :: gender :: declension :: Nil =>
         PersonalPronoun3.collect {
-        case (p, d, g, v) if (p == pronoun || pronoun == "*") &&
+        case (p, d, g, v) if
+          (p == pronoun || pronoun == "*") &&
           (d.substring(0, 1) == declension.toLowerCase.substring(0, 1) || declension == "*") &&
           (g.substring(0, 1) == gender.toLowerCase.substring(0, 1) || gender == "*") =>
           (p, g, d, v)
@@ -151,9 +152,10 @@ class DeclensionService extends Service {
       data.map(_._3).toSet.size,
       Int.MaxValue
     )
+
     val listValues = data.map(x => List(x._1, x._2, x._3, x._4).zipWithIndex)
     val ordered = listValues.map(_.sortBy(x => counts(x._2)).map(_._1))
-    ordered.map(x => (x(0), x(1), x(2), x(3)))
+    ordered.map(x => (x(0), x(2), x(1), x(3)))
   }).
     map(print3dimension).
     flatMap(sendBack)
