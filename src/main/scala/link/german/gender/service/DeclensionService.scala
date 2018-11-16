@@ -150,11 +150,14 @@ class DeclensionService extends Service {
       data.map(_._1).toSet.size,
       data.map(_._2).toSet.size,
       data.map(_._3).toSet.size,
-      Int.MaxValue
-    )
+      Int.MinValue + 2
+    ).zipWithIndex.map {
+      case (1, i) => Int.MaxValue - i
+      case x => x._1
+    }
 
     val listValues = data.map(x => List(x._1, x._2, x._3, x._4).zipWithIndex)
-    val ordered = listValues.map(_.sortBy(x => counts(x._2)).map(_._1))
+    val ordered = listValues.map(_.sortBy(x => -counts(x._2)).map(_._1))
     ordered.map(x => (x(0), x(2), x(1), x(3)))
   }).
     map(print3dimension).
