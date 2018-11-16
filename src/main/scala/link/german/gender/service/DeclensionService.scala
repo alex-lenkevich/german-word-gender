@@ -4,11 +4,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class DeclensionService extends Service {
 
-  val Declensions = Seq("N", "A", "D", "G")
-  val Genders = Seq("M", "F", "N", "P")
+  val Declensions = Seq("nominativ", "akkusativ", "dativ", "genitiv")
+  val Genders = Seq("maskulin", "feminin", "neutrum", "plural")
   val Regex = "(\\(\\)|\\s)*(->|'| (to|in) | )(\\(\\)|\\s)*"
 
-  val personalPronoun2: Seq[(String, String, String)] = Seq(
+  val PersonalPronoun2: Seq[(String, String, String)] = Seq(
     "ich" -> Seq("ich",       "mich"         ,"mir",           "meiner"),
     "du"  -> Seq("du",        "dich"         ,"dir",           "deiner"),
     "Sie" -> Seq("Sie",       "Sie"          ,"Ihnen",         "Ihrer"),
@@ -23,7 +23,7 @@ class DeclensionService extends Service {
     case (k, v) => (Declensions zip v).map{case (d, x) => (k, d, x)}
   }
 
-  val personalPronoun3: Seq[(String, String, String, String)] = Seq(
+  val PersonalPronoun3: Seq[(String, String, String, String)] = Seq(
 
     "das" -> Seq(
      /*                 m*/  /*f*/  /*n*/  /*M*/
@@ -122,45 +122,70 @@ class DeclensionService extends Service {
       }
   }
 
+  val Order = Declensions ++ Genders ++ PersonalPronoun3.map(_._1)
+
+
   override def applicable(msg: String): Boolean = msg.matches(".*" + Regex + ".*")
 
   override def process[T](msg: String, sendBack: String => Future[T])(implicit ec: ExecutionContext): Future[T] = Future {
     msg.split(Regex).toList match {
       case pronoun :: declension :: Nil =>
-        personalPronoun2.collect {
-          case (p, d, v) if (p == pronoun || pronoun == "*") &&
-            (d == declension.toUpperCase || declension == "*") =>
+        PersonalPronoun2.collect {
+          case (p, d, v) if
+            (p.substring(0, 1) == pronoun.toLowerCase.substring(0, 1) || pronoun == "*") &&
+            (d.substring(0, 1) == declension.toLowerCase.substring(0, 1) || declension == "*") =>
             ("", p, d, v)
         }
       case pronoun :: gender :: declension :: Nil =>
-        personalPronoun3.collect {
+        PersonalPronoun3.collect {
         case (p, d, g, v) if (p == pronoun || pronoun == "*") &&
-          (d == declension.toUpperCase || declension == "*") &&
-          (g == gender.toUpperCase || gender == "*") =>
+          (d.substring(0, 1) == declension.toLowerCase.substring(0, 1) || declension == "*") &&
+          (g.substring(0, 1) == gender.toLowerCase.substring(0, 1) || gender == "*") =>
           (p, g, d, v)
       }
     }
-  }.map(print3dimension).flatMap(sendBack)
+  }.
+//    map{ data =>
+//      val seq = data.map { case (x1, x2, x3, x4) => Seq(x1, x2, x3, x4).zipWithIndex }
+//      val weights = seq.flatten.distinct.groupBy{_._2}.mapValues(_.size)
+//      weights.toSeq.sortBy(_._2).apply(2)
+//      seq.map(_.sortBy(x => weights(x._2)).map(_._1)).map {
+//        case Seq(x1, x2, x3, x4) => (x1, x2, x3, x4)
+//      }
+//    }.
+    map(print3dimension).
+    flatMap(sendBack)
 
   def print3dimension(data: Seq[(String, String, String, String)]) = {
-    data.groupBy(_._1).
-      mapValues { _.map {case (_, column, row, value) => (column, row, value) } }.
-      mapValues { table =>
-        val labelWidth = table.map(_._2.length).max
-        val columnWidth = table.map(_._3.length).max
-        table.groupBy(_._2).
-          mapValues { _.map {case (_, row, value) => (row, value) } }.
-          map { case (column, row) =>
-            val rowData = row.map { case (_, value) =>
-              value.padTo(columnWidth, " ").mkString("")
-            }
-            (column.padTo(labelWidth, " ") ++ rowData).
-            mkString(s"| ", " | ", " |")
-        }.mkString("\n")
-      }.map {
-        case (title, table) => s"*$title*\n```\n$table\n```"
-      }.mkString("\n\n")
+    val tableLabels: Seq[String] = data.map(_._1).distinct.sortBy(Order.indexOf)
+    val rowLabels: Seq[String] = data.map(_._2).distinct.sortBy(Order.indexOf)
+    val columnLabels: Seq[String] = data.map(_._3).distinct.sortBy(Order.indexOf)
 
+    tableLabels.map {tableLabel =>
+      val table = data.collect { case (`tableLabel`, row, column, value) => (row, column, value) }
+
+      val labelColumnWidth = table.map(_._1.length).max
+      val columns = table.groupBy(_._2)
+      val columnWidth = columns.map { case (columnLabel, column) =>
+        columnLabel -> (columnLabel.length +: column.map(_._3.length)).max
+      }
+
+      val headRow = ("".padTo(labelColumnWidth, " ").mkString("") +: columnLabels.map(x => x.padTo(columnWidth(x), " ").
+        mkString(""))).
+        mkString(s"| ", " | ", " |")
+
+      val tableBody = rowLabels.map { rowLabel =>
+        val rowData = columnLabels.map { columnLabel =>
+          table.collect { case (`rowLabel`, `columnLabel`, value) =>
+            value.padTo(columnWidth(columnLabel), " ").mkString("")
+          }.head
+        }
+        (rowLabel.padTo(labelColumnWidth, " ").mkString("") +: rowData).mkString(s"| ", " | ", " |")
+      }
+      tableLabel -> (headRow +: tableBody).mkString("\n")
+    }.map {
+      case (title, table) => s"*$title*\n```\n$table\n```"
+    }.mkString("\n\n")
   }
 
 }

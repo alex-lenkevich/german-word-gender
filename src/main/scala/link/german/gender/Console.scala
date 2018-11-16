@@ -7,9 +7,10 @@ import scala.io.StdIn
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-object Console {
+object Console/* extends App*/ {
 
   while(true) {
+
     val msg = StdIn.readLine()
     val sendBack: String => Future[Unit] = msg => Future {
       println(msg)
