@@ -23,6 +23,7 @@ object Server extends JsonSupport with App with ErrorAccumulatingCirceSupport {
     if (word == "/start") {
       telegramClient.sendMessage(update.message.chat, s"Herzlich willkommen. Send me a noun and I'll suggest its gender.")
     } else {
+      println(s"Received message $word")
       servcieRouter.process(word, answer => telegramClient.sendMessage(update.message.chat, answer))
     }.onComplete {
       case Success(value) =>

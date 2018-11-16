@@ -144,15 +144,17 @@ class DeclensionService extends Service {
           (p, g, d, v)
       }
     }
-  }.
-//    map{ data =>
-//      val seq = data.map { case (x1, x2, x3, x4) => Seq(x1, x2, x3, x4).zipWithIndex }
-//      val weights = seq.flatten.distinct.groupBy{_._2}.mapValues(_.size)
-//      weights.toSeq.sortBy(_._2).apply(2)
-//      seq.map(_.sortBy(x => weights(x._2)).map(_._1)).map {
-//        case Seq(x1, x2, x3, x4) => (x1, x2, x3, x4)
-//      }
-//    }.
+  }.map(data => {
+    val counts = Seq(
+      data.map(_._1).toSet.size,
+      data.map(_._2).toSet.size,
+      data.map(_._3).toSet.size,
+      Int.MaxValue
+    )
+    val listValues = data.map(x => List(x._1, x._2, x._3, x._4).zipWithIndex)
+    val ordered = listValues.map(_.sortBy(x => counts(x._2)).map(_._1))
+    ordered.map(x => (x(0), x(1), x(2), x(3)))
+  }).
     map(print3dimension).
     flatMap(sendBack)
 
@@ -180,7 +182,7 @@ class DeclensionService extends Service {
             value.padTo(columnWidth(columnLabel), " ").mkString("")
           }.head
         }
-        (rowLabel.padTo(labelColumnWidth, " ").mkString("") +: rowData).mkString(s"| ", " | ", " |")
+        (rowLabel.padTo(labelColumnWidth, " ").mkString("").mkString("") +: rowData).mkString(s"| ", " | ", " |")
       }
       tableLabel -> (headRow +: tableBody).mkString("\n")
     }.map {
