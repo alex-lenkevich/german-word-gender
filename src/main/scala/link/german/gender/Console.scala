@@ -7,7 +7,7 @@ import scala.io.StdIn
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-object Console extends App {
+object Console /*extends App*/ {
 
   while(true) {
 
