@@ -1,6 +1,6 @@
 package link.german
 
-package object gender {
+package object model {
 
   sealed trait Gender {
     def definedArticle: String
@@ -14,5 +14,8 @@ package object gender {
   object Neuter extends Gender {
     override def definedArticle: String = "das"
   }
+
+
+//  case class VerbForm(thirdForm: String, p1: String, p2: String, )
 
 }

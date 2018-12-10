@@ -2,6 +2,7 @@ package link.german.gender
 
 import java.net.URL
 
+import link.german.model._
 import org.htmlcleaner.HtmlCleaner
 
 import scala.concurrent.{ExecutionContext, Future}

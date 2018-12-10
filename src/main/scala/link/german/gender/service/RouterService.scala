@@ -3,7 +3,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class RouterService extends Service {
 
-  private val services = Seq(new DeclensionService, new GenderService)
+  private val services = Seq(new DeclensionService, /*new GenderService, */ new DictService)
 
   override def applicable(msg: String): Boolean = true
 

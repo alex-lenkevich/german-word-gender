@@ -2,7 +2,7 @@ package link.german.gender.service
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DeclensionService extends Service with TableOutput {
+class VerbFormService extends Service with TableOutput {
 
   val Declensions = Seq("nominativ", "akkusativ", "dativ", "genitiv")
   val Genders = Seq("maskulin", "feminin", "neutrum", "plural")

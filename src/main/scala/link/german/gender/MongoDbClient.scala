@@ -1,6 +1,7 @@
 package link.german.gender
 
 import link.german.gender.MongoDbClient.WordGender
+import link.german.model.Gender
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.bson.codecs.configuration.CodecRegistry
 import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY
