@@ -1,6 +1,6 @@
-package link.german.gender
+package link.german.gender.client
 
-import link.german.gender.MongoDbClient.WordGender
+import link.german.gender.client.MongoDbClient.WordGender
 import link.german.model.Gender
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.bson.codecs.configuration.CodecRegistry

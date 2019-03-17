@@ -1,4 +1,4 @@
-package link.german.gender
+package link.german.gender.client
 
 import java.net.URL
 

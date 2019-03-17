@@ -1,4 +1,4 @@
-package link.german.gender
+package link.german.gender.client
 
 import java.net.URL
 
@@ -18,10 +18,6 @@ object BablaClient {
       case "{Neutrum}" => Neuter
       case "{Maskulin}" => Masculine
       case "{Feminin}" => Feminine
-    }.map{
-      gender =>
-        println(s"Gender for $word is $gender")
-        gender
     }
   }
 
@@ -31,7 +27,7 @@ object BablaClient {
     }
   }
 
-  def requestVerb(word: String)(implicit ec: ExecutionContext): Future[Option[String]] = Future {
+  def requestVerb(word: String)(implicit ec: ExecutionContext): Future[Option[VerbForms]] = Future {
     val cleaner = new HtmlCleaner
     val root = cleaner.clean(new URL(s"https://de.bab.la/konjugieren/deutsch/$word"))
     def getValueByKey(title: String, classes: (String, String, String)) = {
@@ -44,16 +40,17 @@ object BablaClient {
     val PartizipClasses = ("quick-result-entry", "quick-result-option", "sense-group-results")
     val ConjPersonClasses = ("conj-item", "conj-person", "conj-result")
 
-    if (getValueByKey("Infinitiv", PartizipClasses) == "") {
+    val infinitiv = getValueByKey("Infinitiv", PartizipClasses)
+    if (infinitiv == "") {
       None
     } else {
-      Some(s"""
-       |Infinitiv: $word
-       |du: ${getValueByKey("du", ConjPersonClasses)}
-       |er/sie/es: ${getValueByKey("er/sie/es", ConjPersonClasses)}
-       |Partizip I: ${getValueByKey("Partizip Präsens", PartizipClasses)}
-       |Partizip II: ${getValueByKey("Partizip Perfekt", PartizipClasses)}""".stripMargin
-      )
+      Some(VerbForms(
+        infinitiv,
+        getValueByKey("du", ConjPersonClasses),
+        getValueByKey("er/sie/es", ConjPersonClasses),
+        getValueByKey("Partizip Präsens", PartizipClasses),
+        getValueByKey("Partizip Perfekt", PartizipClasses)
+      ))
     }
   }
 
