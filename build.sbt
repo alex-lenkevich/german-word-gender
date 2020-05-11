@@ -23,7 +23,11 @@ libraryDependencies ++= Seq(
   "dev.zio" %% "zio" % "1.0.0-RC18-2",
   "org.typelevel" %% "cats-core" % "2.1.1",
   "javazoom" % "jlayer" % "1.0.1",
-  "org.apache.commons" % "commons-text" % "1.8"
+  "org.apache.commons" % "commons-text" % "1.8",
+  "com.1stleg" % "jnativehook" % "2.1.0",
+  "org.scala-lang.modules" %% "scala-xml" % "2.0.0-M1",
+  "org.jsoup" % "jsoup" % "1.13.1"
+
 )
 
 scalacOptions += "-Ypartial-unification"

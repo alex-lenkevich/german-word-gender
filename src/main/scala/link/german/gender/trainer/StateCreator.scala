@@ -30,12 +30,12 @@ object StateCreator extends App {
   }
     .filterNot(_.isEmpty)
     .toSeq
-    .filter { x =>
+//    .filter { x =>
       //      x.head.wordClass == "VB"
       //      x.head.wordClass == "ADV"
-      x.head.wordClass == "N"
+//      x.head.wordClass == "N"
       //      Seq("CONJ", "ADJ", "ADV").contains(x.head.wordClass)
-    }
+//    }
     .sortBy( x =>
       (
         x.head.genus,

@@ -1,152 +1,105 @@
 package link.german.gender.trainer
 
-import java.io.{File, FileInputStream, FileWriter}
+import java.io.File
 import java.nio.file.Files
-import java.time.LocalDateTime
-import java.util.concurrent.{Executor, Executors}
 
-import io.circe.parser._
-import io.circe.syntax._
-import javazoom.jl.player.Player
-import link.german.gender.PonsAudioDownloader
 import link.german.gender.SyntaxSugar._
-import link.german.gender.trainer.enums.AnswerType._
 import link.german.gender.trainer.enums.MemoryState
-import link.german.gender.trainer.enums.MemoryState.MemoryState
 import link.german.gender.trainer.model._
-import org.apache.commons.text.similarity.{LevenshteinDetailedDistance, LevenshteinDistance}
+import link.german.gender.{LingvoClient, PonsAudioDownloader}
+import zio._
+import zio.console.{putStrLn, _}
 
-import scala.collection.Seq
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
-import scala.io.{BufferedSource, Source, StdIn}
-import scala.util.{Random, Try}
+import scala.util.matching.Regex
 
-object Main extends App with PonsAudioDownloader {
+object Main extends App with PonsAudioDownloader with StateService with LearningService with LingvoClient {
 
-  private val executorService = Executors.newSingleThreadExecutor()
-  implicit val soundEc: ExecutionContextExecutor = ExecutionContext.fromExecutor(executorService)
+  val infoFilterRegex: Regex = """info (.+)""".r
 
-  sys.addShutdownHook(
-    () => executorService.shutdown()
-  )
-
-  def loadState: Seq[WordState] = {
-    val source: BufferedSource = Source.fromFile("trainer_state.json")
-    val state = for {
-      json <- source.getLines().mkString =>> parse
-      state <- json.as[Seq[WordState]]
-    } yield state
-    source.close()
-    val time = LocalDateTime.now.plusWeeks(1)
-    state.map(_
-      .filterNot(_.state == MemoryState.Persistent)
-      .filter(_.nextAskDate.exists(_.isBefore(time)))
-      .sortBy(_.nextAskDate)
-      .foreach(x => println(x.toString)))
-    state
-  }.fold(e => throw new Exception("Can't load state from file", e), x => x)
-
-  def saveState(state: Seq[WordState]): Seq[WordState] = {
-    val writer = new FileWriter("trainer_state.json")
-    state.asJson.noSpaces =>> writer.write
-    writer.close()
-    state
-  }
-
-  def learnNew(state: Seq[WordState]): Seq[WordState] = {
-    val newState = try {
-      val states = state
-        .filter(_.word.genus.exists(_.contains("f")))
-        .filter(_.shouldBeAsked).sortBy(
-        x => (x.nextAskDate.getOrElse(LocalDateTime.MAX),
-          x.word.genus,
-          x.word.name.toLowerCase.replaceAll("^(.+ )?(be|ge|ent|emp|er|ver|miß|zer|los|an|ab|bei|mit|ein|vor|nach|uber|über|zu|unter|um|aus|auf)+", "$1"),
-        )
-      )
-      states.take(15) =>> learn
-    } catch {
-      case ExitException(ns) => throw ExitException(state.diff(ns) ++ ns)
+  def makeSession(list: FullWordList, commands: Seq[String]): TZIO[Int] = (for {
+    _ <- putStrLn("learn | learn hard | learn active | info | info hard | info session | info <word>")
+    command <- commands.headOption.fold(getStrLn)(UIO(_))
+    (updatedWords, newCommands) <- command match {
+      case "info" =>
+        UIO(list -> Seq()) <* putStrLn(list.active.sortBy(_.word.name).toString())
+      case "info active" =>
+        UIO(list -> Seq()) <* printActive(list)
+      case "info hard" =>
+        UIO(list -> Seq()) <* putStrLn(list.active.filter(_.state == MemoryState.Hard).sortBy(_.word.name).toString())
+      case "info session" =>
+        UIO(list -> Seq()) <* putStrLn(selectWordsFromNextSession(list.active).toString())
+      case infoFilterRegex(word) =>
+        UIO(list -> Seq()) <* putStrLn(list.active.filter(_.word.name.contains(word)).sortBy(_.word.name).toString())
+      case "learn hard" =>
+        makeSelectSession(list.active).map(_ -> Seq())
+      case "plan" => UIO(list -> Seq()) <* putStrLn(list.active.predictPlan)
+      case "learn" => makeTextSession(list.active).map(_ -> Seq("info active"))
+      case "learn active" => (selectActiveWords(list) =>> textInputTest()).map(_ -> Seq("info active"))
+      case "examples" =>
+        (selectWordsFromNextSession(list) =>> withExamples =>> textExamples).map(_ -> Seq("learn examples"))
+      case "learn examples" =>
+        (selectWordsFromNextSession(list.filter(_.word.examples.exists(_.nonEmpty))) =>>
+          withExamples =>>
+          textExamples).map(_ -> Seq("info active"))
+      case "" =>
+        UIO(list -> Seq("learn"))
+      case _ => UIO(list -> Seq())
     }
-    newState.map(x => s"${x.word.name}: ${x.state} (${x.answers})")
-    (state.diff(newState) ++ newState)
+    newList = list ++ updatedWords
+    _ <- if(list != newList) saveState(newList) else ZIO.unit
+    _ <- makeSession(newList, commands.drop(1) ++ newCommands)
+    n <- ZIO.never
+  } yield n).catchSome {
+    case ExitException(s) => saveState(list ++ s) *> UIO(0)
   }
 
-  Try {
-    Files.copy(new File("trainer_state.json").toPath, {
-      val file = new File(s"backup/trainer_state_${System.currentTimeMillis()}.json")
-      file.toPath
-    })
-    (1 to 1000).foldLeft(loadState){
-      (state, _) =>
-        println(state.groupBy(_.state).mapValues(_.length).map{
-          case (k, v) => s"$k: $v"
-        }.mkString("State: ", ", ", "\n"))
-        state =>> learnNew =>> saveState
+  private def printActive(list: FullWordList) = {
+    putStrLn(selectActiveWords(list).toString())
+  }
+
+  private def selectActiveWords(list: FullWordList) = {
+    list.active.filter(x => x.state != MemoryState.New && x.shouldBeAsked).sortBy(_.word.name)
+  }
+
+  private def withExamples(list: WordList) = {
+    list.map{ws =>
+      if(ws.word.examples.isEmpty) {
+        val word = readFromLingvo(ws.word.name)
+        ws.copy( word = ws.word.copy(translate = word.translate, examples = word.examples) )
+      } else ws
     }
-  }.recover {
-    case ExitException(s) => s
-  }.foreach(saveState)
-
-  def readAnswer() = {
-    print("> ")
-    StdIn.readLine()
   }
 
-  def learn(words: Seq[WordState]): Seq[WordState] = {
-    println(words.map(_.toString).mkString("\n"))
-    (words.filter(_.shouldBeAsked) =>> Random.shuffle) match {
-      case Seq() => words
-      case word +: _ =>
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
-        println(s"# ${word.word.translate}")
-        val startTime = System.currentTimeMillis()
-        @scala.annotation.tailrec
-        def getAnswer(attempt: Int): Answer = {
-          val answer = readAnswer()
-          val correct = word.word.name
-          if(answer == "exit") {
-            throw ExitException(words)
-          } else if(answer == "") {
-            printAnswerWithSound(word.word)
-            while(readAnswer != correct){}
-            Answer(Incorrect, attempt, System.currentTimeMillis() - startTime)
-          } else {
-            val results = LevenshteinDetailedDistance.getDefaultInstance.apply(answer, correct)
-            if(results.getDistance == 0) {
-              playSound(word.word)
-              Answer(Correct, attempt, System.currentTimeMillis() - startTime)
-            } else if(answer == correct.replaceAll("(die|das|der) ", "")) {
-              "# Mit dem Artikel!" =>> println
-              getAnswer(attempt)
-            } else {
-              s"# Nein (-${results.getDeleteCount} +${results.getInsertCount} ≠${results.getSubstituteCount})!" =>> println
-              getAnswer(attempt + 1)
-            }
-          }
-        }
-
-        val state = word.withAnswer(getAnswer(1))
-
-        (words.filterNot(_==state) :+ state) =>> learn
-    }
-
+  private def makeSelectSession(list: WordList) = {
+    hardWordsTest(list.filter(_.state == MemoryState.Hard))
   }
 
-  def playSound(word: Word): Unit = Future {
-    val filePath = getPonsAudio(word.name)
-    val player = new Player(new FileInputStream(filePath))
-    player.play()
-    player.close()
+  private def makeTextSession(list: WordList) = {
+    selectWordsFromNextSession(list) =>> textInputTest()
   }
 
-  def printAnswerWithSound(word: Word): Unit = {
-    s"# ${word.name}" =>> println
-    playSound(word)
+  private def selectWordsFromNextSession(list: WordList) = {
+    list.active.filter(_.shouldBeAsked).shuffle.sorted.take(20)
   }
 
-  case class ExitException(state: Seq[WordState]) extends Exception
 
+  override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = {
+    for {
+      _ <- Task {
+//        GlobalScreen.addNativeKeyListener(GlobalKeyListener)
+//        GlobalScreen.setEventDispatcher(Executors.newSingleThreadExecutor)
+//        GlobalScreen.registerNativeHook()
+      }
+      _ <- Task {
+        Files.copy(new File("trainer_state.json").toPath, {
+          val file = new File(s"backup/trainer_state_${System.currentTimeMillis()}.json")
+          file.toPath
+        })
+      }
+      initState <- loadState
+      _ <- makeSession(initState, Seq("info"))
+    } yield 0
+  }.catchAll(x => putStrLn(x.getMessage) *> UIO(1))
 }
 
 
