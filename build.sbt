@@ -26,8 +26,9 @@ libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-text" % "1.8",
   "com.1stleg" % "jnativehook" % "2.1.0",
   "org.scala-lang.modules" %% "scala-xml" % "2.0.0-M1",
-  "org.jsoup" % "jsoup" % "1.13.1"
-
+  "org.jsoup" % "jsoup" % "1.13.1",
+  "org.scala-lang.modules" %% "scala-swing" % "2.1.1"
 )
 
 scalacOptions += "-Ypartial-unification"
+scalacOptions += "-Xlog-implicits"

@@ -3,6 +3,7 @@ package link.german.gender
 import java.time.{Duration, LocalDate, LocalDateTime, OffsetDateTime, Period}
 import java.time.temporal.ChronoUnit
 
+import org.checkerframework.checker.units.qual.A
 import zio.ZIO
 
 object SyntaxSugar {
@@ -10,9 +11,25 @@ object SyntaxSugar {
   implicit val localDateOrdering: Ordering[LocalDate] = (x: LocalDate, y: LocalDate) => x.compareTo(y)
   implicit val localDateTimeOrdering: Ordering[LocalDateTime] = (x: LocalDateTime, y: LocalDateTime) => x.compareTo(y)
 
-  implicit class `collections sugar`[A](val date: TraversableOnce[A]) extends AnyVal {
-    def maxOpt(implicit cmp: Ordering[A]): Option[A] = date.reduceOption(cmp.max)
-    def minOpt(implicit cmp: Ordering[A]): Option[A] = date.reduceOption(cmp.min)
+  implicit class `collections sugar`[A](val c: TraversableOnce[A]) extends AnyVal {
+    def maxOpt(implicit cmp: Ordering[A]): Option[A] = c.reduceOption(cmp.max)
+    def maxByOpt[B](f: A => B)(implicit cmp: Ordering[B]): Option[A] = c.reduceOption(Ordering.by(f).max)
+    def minOpt(implicit cmp: Ordering[A]): Option[A] = c.reduceOption(cmp.min)
+    def minByOpt[B](f: A => B)(implicit cmp: Ordering[B]): Option[A] =  c.reduceOption(Ordering.by(f).min)
+  }
+
+  implicit class `map2 sugar`[A, B, C](val map: Map[A, Map[B, Seq[C]]]) extends AnyVal {
+    def merge2(key: (A, B), el: C): Map[A, Map[B, Seq[C]]] = {
+      map + (key._1 -> (map(key._1) + (key._2 -> (map(key._1)(key._2) :+ el))))
+    }
+
+  }
+
+  implicit class `map sugar`[A, B](val map: Map[A, Seq[B]]) extends AnyVal {
+    def merge(key: A, el: B): Map[A, Seq[B]] = {
+      map + (key -> (map(key) :+ el))
+    }
+
   }
 
   implicit class LocalDateTimeSyntaxSugar(date: LocalDateTime) {
@@ -41,9 +58,9 @@ object SyntaxSugar {
       val days = ChronoUnit.DAYS.between(LocalDateTime.now, date)
       val hours = ChronoUnit.HOURS.between(LocalDateTime.now, date)
       val minutes = ChronoUnit.MINUTES.between(LocalDateTime.now, date)
-      if(days != 0) s"In $days days" else
-      if(hours != 0) s"In $hours hours" else
-      if(minutes != 0) s"In $minutes minutes" else "Now"
+      if(days != 0) s"+${days}d" else
+      if(hours != 0) s"+${hours}h" else
+      if(minutes != 0) s"+${minutes}m" else "Now"
     }
   }
 
@@ -62,13 +79,21 @@ object SyntaxSugar {
 
   implicit class DurationSyntaxSugar(date: Duration) {
 
-    def pretty: String = {
+    def prettyShort: String = {
       val days = date.toDays
       val hours = date.toHours
       val minutes = date.toMinutes
-      if(days != 0) s"$days days" else
-      if(hours != 0) s"$hours hours" else
-      if(minutes != 0) s"$minutes minutes" else "--"
+      if(days != 0) s"${days}d" else
+      if(hours != 0) s"${hours}h" else
+      if(minutes != 0) s"${minutes}m" else "--"
+    }
+
+    def pretty: String = {
+      val days = Some(date.toDaysPart).filter(_ != 0).map(_ + "d")
+      val hours = Some(date.toHoursPart).filter(_ != 0).map(_ + "h")
+      val minutes = Some(date.toMinutesPart).filter(_ != 0).map(_ + "m")
+      val seconds = Some(date.toSecondsPart).filter(_ != 0).map(_ + "s")
+      Seq(days, hours, minutes, seconds).flatten.mkString(" ")
     }
   }
 
