@@ -1,5 +1,6 @@
 package link.german.gender.trainer2
 
+import link.german.gender.trainer2.Main.loadWords
 import link.german.gender.trainer2.test.TestType.Present3
 import zio._
 import zio.console._
@@ -9,9 +10,10 @@ object StatePlayground extends App with StateService {
 
   override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = {
     for {
-      state <- loadState
+      words <- loadWords()
+      state <- loadState(words)
       diff <- Task {
-        state.states.filter(Present3.isSupported)
+        state.states.filter(x => Present3.isSupported(x.data))
           .map(s => (s.data.de -> s.data.present3) -> (
             s.data.de.replaceAll(" \\(sich\\)", "")
               .replaceAll("([td])e?n$", "$1et")

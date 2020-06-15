@@ -4,8 +4,10 @@ import java.time
 import java.time.temporal.ChronoUnit
 import java.time.{LocalDate, LocalDateTime}
 
+import link.german.gender.MongoDbClient.WordGender
 import link.german.gender.SyntaxSugar._
 import link.german.gender.trainer.model._
+import link.german.gender.trainer2.test.TestType.{KasusTestType, Translate}
 import link.german.gender.trainer2.test._
 import zio.ZIO
 
@@ -30,7 +32,7 @@ object model {
         case ((st, res), date) => ((
           st.map {
             case x if x.nextAsk.exists(_._2.timeHasCome(date)) =>
-              x.withAnswer(Answer(correct = true, TestMethod.Text, Seq(x.testType.answer(x)), 0, date))
+              x.withAnswer(Answer(correct = true, TestMethod.Text, Seq(x.testType.answer(x.data)), 0, date))
             case x => x
           },
           res + (date -> st.count(_.nextAsk.exists(_._2.timeHasCome(date)))))
@@ -130,7 +132,6 @@ object model {
       .filter(!_.data.de.contains("ehrlich"))
       .filter(!_.data.de.contains("geehrt"))
 
-
     def answersLine: String = {
       active.states
         .map(x => s"${x.data.de.padTo(30, ' ')} ${x.state.toString.padTo(10, ' ')}: ${x.answersLine.getOrElse("NEW")}").mkString("\n")
@@ -164,13 +165,13 @@ object model {
       answers = answers :+ answer
     )
 
-    def latestOpt: Option[Answer] = answers.sortBy(_.date).lastOption
+    def latestOpt: Option[Answer] = sortedAnswers.sortBy(_.date).lastOption
 
     def latest: Answer = latestOpt.get
 
     def latestSuccessOpt: Option[Answer] = combo.headOption
 
-    def combo: Seq[Answer] = answers.reverse.takeWhile(_.isCorrect)
+    def combo: Seq[Answer] = sortedAnswers.reverse.takeWhile(_.isCorrect)
 
     def effectiveCombo: Int = combo.sortBy(_.date).foldLeft(Seq[Answer]()) {
       case (Seq(), a) => Seq(a)
@@ -183,7 +184,7 @@ object model {
 
     def comboDuration: time.Duration = (for {a <- comboDates.minOpt; b <- comboDates.maxOpt} yield b - a).getOrElse(java.time.Duration.ZERO)
 
-    def allCorrect: Boolean = answers.forall(_.isCorrect)
+    def allCorrect: Boolean = sortedAnswers.forall(_.isCorrect)
 
     def length: Int = answers.length
 
@@ -198,7 +199,7 @@ object model {
     }
 
     def nextAskDate: Option[LocalDateTime] = (state match {
-      case Persistent => Some(latest.date + 30.days)
+      case Persistent => Some(latest.date + 45.days)
       case InMemory | Temp => Some(latest.date.toLocalDate
         .plusDays(comboDuration.toDays * 2 + 1)
         .atStartOfDay()
@@ -217,6 +218,7 @@ object model {
     def nextAsk: Option[(TestMethod, LocalDateTime)] = nextAskDate.map(nextAskMethod -> _)
 
     def nextAskMethod: TestMethod = testType match {
+      case TestType.Translate if state == Hard && !latest.isCorrect => TestMethod.Select
       case TestType.Translate => TestMethod.Text
       case _ => TestMethod.Select
     }
@@ -230,13 +232,28 @@ object model {
       case Temp => "1"
       case InMemory => "2"
       case Hard => "3" + effectiveCombo.toString.padTo(4, ' ') + comboDuration.getSeconds.toString.padTo(20, ' ')
-      case New => "4" + data.de.toLowerCase.replaceAll(Word.prefexRegex, "")
+      case New => "4" + testTypeOrder + wordOrder
       case Persistent => "5"
     }
 
-    def question: String = testType.question(this)
+    def testTypeOrder: String = testType match {
+      case Translate => "0"
+      case KasusTestType => "1"
+      case _ => "2"
+    }
 
-    def answer: String = testType.answer(this)
+    def wordOrder: String = if(data.de.matches("^[A-ZÄÜÖ]")) {
+      "0"
+    } else if(data.de.endsWith("n") || data.perfekt.isDefined) {
+      "2"
+    } else {
+      "1"
+    } + data.de.toLowerCase.replaceAll(Word.prefexRegex, "")
+
+
+    def question: String = testType.question(this.data)
+
+    def answer: String = testType.answer(this.data)
 
 
     def answersLine: Option[String] = {
@@ -265,7 +282,15 @@ object model {
 
   }
 
-  case class WordData(id: String, de: String, ru: String, kasus: Option[Kasus] = None, present3: Option[String] = None,
+  case class WordData(
+    id: String,
+    de: String,
+    ru: String,
+    `type`: Option[WordType] = None,
+    kasus: Option[Kasus] = None,
+    plural: Option[String] = None,
+    genetiv: Option[String] = None,
+    present3: Option[String] = None,
     prateritum: Option[String] = None, perfekt: Option[String] = None) {
 
     override def equals(obj: Any): Boolean = obj match {
@@ -284,6 +309,16 @@ object model {
   sealed trait Kasus {
     def article: String
   }
+
+  sealed trait WordType
+
+  object WordType {
+    case object Noun extends WordType
+    case object Verb extends WordType
+    case object Adj extends WordType
+    case object Adv extends WordType
+  }
+
 
   object Kasus {
     case object M extends Kasus {

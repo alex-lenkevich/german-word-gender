@@ -73,7 +73,7 @@ object Main extends App with PonsAudioDownloader with StateService with Learning
     list.map{ws =>
       if(ws.word.examples.isEmpty) {
         val word = readFromLingvo(ws.word.name)
-        ws.copy( word = ws.word.copy(translate = word.translate, examples = word.examples) )
+        ws//.copy( word = ws.word.copy(translate = word.translate, examples = word.examples) )
       } else ws
     }
   }

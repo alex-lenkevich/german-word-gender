@@ -31,4 +31,4 @@ libraryDependencies ++= Seq(
 )
 
 scalacOptions += "-Ypartial-unification"
-scalacOptions += "-Xlog-implicits"
+//scalacOptions += "-Xlog-implicits"

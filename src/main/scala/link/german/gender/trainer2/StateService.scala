@@ -8,10 +8,10 @@ import io.circe.parser._
 import io.circe.syntax._
 import io.circe.{Decoder, Encoder, HCursor, Printer}
 import link.german.gender.SyntaxSugar._
-import link.german.gender.trainer.model.TZIO
-import link.german.gender.trainer2.model.{Answer, FullWordList, Kasus, WordData, WordTestResults}
+import link.german.gender.trainer.model.{TZIO, WordState}
+import link.german.gender.trainer2.model.{Answer, FullWordList, Kasus, WordData, WordTestResults, WordType}
 import link.german.gender.trainer2.test.{TestMethod, TestType}
-import zio.Task
+import zio.{Task, UIO, ZIO}
 
 import scala.collection.Seq
 import scala.io.{BufferedSource, Source}
@@ -28,6 +28,7 @@ trait StateService {
     case "P3" => TestType.Present3
     case "PR" => TestType.Prateritum
     case "PP" => TestType.Perfekt
+    case "K" => TestType.KasusTestType
   }
 
   implicit def TestTypeEncoder: Encoder[TestType] = (a: TestType) => (a match {
@@ -35,6 +36,7 @@ trait StateService {
     case TestType.Present3 => "P3"
     case TestType.Prateritum => "PR"
     case TestType.Perfekt => "PP"
+    case TestType.KasusTestType => "K"
   }).asJson
 
   implicit def TestMethodDecoder: Decoder[TestMethod] = (c: HCursor) => c.as[String].map {
@@ -60,6 +62,20 @@ trait StateService {
     case Kasus.P => "P"
   }).asJson
 
+  implicit def WordTypeDecoder: Decoder[WordType] = (c: HCursor) => c.as[String].map {
+    case "N" => WordType.Noun
+    case "V" => WordType.Verb
+    case "Adj" => WordType.Adj
+    case "Adv" => WordType.Adv
+  }
+
+  implicit def WordTypeEncoder: Encoder[WordType] = (a: WordType) => (a match {
+    case WordType.Noun => "N"
+    case WordType.Verb => "V"
+    case WordType.Adj => "Adj"
+    case WordType.Adv => "Adv"
+  }).asJson
+
   implicit val AnswerDecoder: Decoder[Answer] = deriveDecoder[Answer]
   implicit val AnswerEncoder: Encoder[Answer] = deriveEncoder[Answer]
   implicit val StateDTODecoder: Decoder[StateDTO] = deriveDecoder[StateDTO]
@@ -67,23 +83,41 @@ trait StateService {
   implicit val WordDataDecoder: Decoder[WordData] = deriveDecoder[WordData]
   implicit val WordDataEncoder: Encoder[WordData] = deriveEncoder[WordData]
 
-  def loadState: Task[FullWordList] = Task.fromEither {
-    val sourceWords: BufferedSource = Source.fromFile("trainer_words_2.json")
-    val sourceState: BufferedSource = Source.fromFile("trainer_state_2.json")
-    val state = for {
-      jsonState <- sourceState.getLines().mkString =>> parse
+  def loadWords(wordFile: String = "trainer_words_2.json"): Task[Seq[WordData]] = Task.fromEither {
+    val sourceWords: BufferedSource = Source.fromFile(wordFile)
+    val words = for {
       jsonWords <- sourceWords.getLines().mkString =>> parse
-      state <- jsonState.as[Seq[StateDTO]]
       words <- jsonWords.as[Seq[WordData]]
-    } yield FullWordList(state.map(s => WordTestResults(words.find(_.id == s.wordId).get, s.testType, s.answers)))
+    } yield words
     sourceWords.close()
-    sourceState.close()
-    state
+    words
+  }
+
+  def loadState(words: Seq[WordData], stateFile: String = "trainer_state_2.json"): Task[FullWordList] = {
+    UIO.effectTotal(Source.fromFile(stateFile)).bracket(x => UIO(x.close()), { sourceState =>
+       for {
+        jsonState <- ZIO.fromEither(sourceState.getLines().mkString =>> parse)
+        state <- ZIO.fromEither(jsonState.as[Seq[StateDTO]])
+      } yield
+        FullWordList(words.flatMap {word =>
+          Seq(
+            TestType.Translate,
+            TestType.KasusTestType,
+            TestType.Present3,
+            TestType.Prateritum,
+            TestType.Perfekt
+          ).filter(_.isSupported(word)).map(
+            WordTestResults(word, _, Seq())
+          )
+        }) ++ FullWordList(state.map(s => WordTestResults(words.find(_.id == s.wordId).get, s.testType, s.answers)))
+
+    })
   }
 
   def saveState(state: FullWordList): TZIO[FullWordList] = Task {
+    val json = state.states.map(s => StateDTO(s.data.id, s.testType, s.answers)).distinct.asJson.pretty(printer)
     val writer = new FileWriter("trainer_state_2.json")
-    state.states.map(s => StateDTO(s.data.id, s.testType, s.answers)).distinct.asJson.pretty(printer) =>> writer.write
+    writer.write(json)
     writer.close()
     state
   }

@@ -1,54 +1,70 @@
 package link.german.gender.trainer2
 
-import link.german.gender.trainer2.model.{Answer, WordListLike, WordTestResults}
-import org.apache.commons.text.similarity.{LevenshteinDetailedDistance, LevenshteinDistance}
+import link.german.gender.trainer2.model.{Answer, WordData}
+import org.apache.commons.text.similarity.LevenshteinDistance
 
 object test {
 
   case class Test(`type`: TestType, form: TestMethod)
 
   trait TestType {
-    def isSupported(word: WordTestResults): Boolean
-    def question(word: WordTestResults): String
-    def answer(word: WordTestResults): String
-    def options(word: WordTestResults, list: WordListLike, n: Int): Seq[String] = ???
+    def isSupported(word: WordData): Boolean
+    def question(word: WordData): String
+    def answer(word: WordData): String
+    def options(word: WordData, list: Seq[WordData], n: Int): Seq[String] = ???
+    def order = "5"
   }
 
   object TestType {
 
     case object Translate extends TestType {
-      def question(word: WordTestResults): String = word.data.ru
+      def question(word: WordData): String = word.ru
 
-      def answer(word: WordTestResults): String = word.data.kasus match {
-        case Some(kasus) => s"${kasus.article} ${word.data.de}"
-        case None => word.data.de
+      def answer(word: WordData): String = word.kasus match {
+        case Some(kasus) => s"${kasus.article} ${word.de}"
+        case None => word.de
       }
 
-      override def isSupported(word: WordTestResults): Boolean = true
+      override def order: String = "0"
 
-      override def options(word: WordTestResults, list: WordListLike, n: Int): Seq[String] =
-        list.states.sortBy(s => LevenshteinDistance.getDefaultInstance()(word.data.de, s.data.de)).take(n).map(this.answer)
+      override def isSupported(word: WordData): Boolean = true
+
+      override def options(word: WordData, list: Seq[WordData], n: Int): Seq[String] =
+        (list.map(_.de) :+ answer(word)).distinct.sortBy(s => LevenshteinDistance.getDefaultInstance()(answer(word), s)).take(n)
+    }
+
+    case object KasusTestType extends TestType {
+      def question(word: WordData): String = word.de
+
+      def answer(word: WordData): String = word.kasus match {
+        case Some(k) => k.article
+      }
+
+      override def isSupported(data: WordData): Boolean = data.kasus.isDefined
+
+      override def options(word: WordData, list: Seq[WordData], n: Int): Seq[String] =
+        Seq("die", "der", "das")
     }
 
     sealed trait VerbTestType extends TestType {
 
-      override def isSupported(word: WordTestResults): Boolean = word.data.perfekt.isDefined
+      override def isSupported(data: WordData): Boolean = data.perfekt.isDefined
     }
 
     case object Present3 extends VerbTestType {
-      def question(word: WordTestResults): String = s"${word.data.de} (Present form 3)"
-      def answer(word: WordTestResults): String =  word.data.present3.get
+      def question(word: WordData): String = s"${word.de} (Present form 3)"
+      def answer(word: WordData): String =  word.present3.get
     }
 
     case object Prateritum extends VerbTestType {
-      def question(word: WordTestResults): String = s"${word.data.de} (Präteritum)"
-      def answer(word: WordTestResults): String =  word.data.prateritum.get
+      def question(word: WordData): String = s"${word.de} (Präteritum)"
+      def answer(word: WordData): String =  word.prateritum.get
 
     }
 
     case object Perfekt extends VerbTestType {
-      def question(word: WordTestResults): String = s"${word.data.de} (Perfekt)"
-      def answer(word: WordTestResults): String =  word.data.perfekt.get
+      def question(word: WordData): String = s"${word.de} (Perfekt)"
+      def answer(word: WordData): String =  word.perfekt.get
     }
 
   }

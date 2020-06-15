@@ -1,53 +1,48 @@
 package link.german.gender.trainer
 
-import link.german.gender.trainer2
-import link.german.gender.LingvoClient
-import link.german.gender.trainer2.enums.AnswerType.AnswerType
-import link.german.gender.trainer2.enums.{AnswerType, QuestionType}
-import link.german.gender.trainer.model.{Answer, Word, WordList, WordState}
-import link.german.gender.trainer2.model.{Kasus, WordData}
-import link.german.gender.trainer2.test.{TestMethod, TestType}
+import java.io.File
+import java.nio.file.Files
+import java.util.UUID
+
+import link.german.gender.trainer.model.Answer
+import link.german.gender.trainer2.enums.AnswerType
+import link.german.gender.trainer2.model.WordData
+import link.german.gender.trainer2.test.TestMethod
+import link.german.gender.{DudenClient, LingvoClient, trainer2}
 import zio._
+import zio.console._
 
 import scala.io.Source
-import scala.util.Try
 
-object StateFixer extends App with StateService with LingvoClient {
+object StateFixer extends App with StateService with LingvoClient with DudenClient {
 
   private val service2 = new Object with trainer2.StateService
 
-  override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = {
-    for {
-      state <- loadState
-      newState <- Task {
-        trainer2.model.FullWordList(
-          state.states.flatMap { r =>
-            val word = WordData(r.id, r.word.name, r.word.translate, r.word.genus.map(_.head match {
-              case 'm' => Kasus.M
-              case 'f' => Kasus.F
-              case 'n' => Kasus.N
-              case 'p' => Kasus.P
-            }), r.word.p3, r.word.pr, r.word.pp)
-            Seq(
-              r.word.pr.map(_ => trainer2.model.WordTestResults(word, TestType.Prateritum,
-                r.answers.filter(_.questionType == QuestionType.PR).map(convertAnswer)
-              )),
-              r.word.pr.map(_ => trainer2.model.WordTestResults(word, TestType.Perfekt,
-                r.answers.filter(_.questionType == QuestionType.PP).map(convertAnswer)
-              )),
-              r.word.pr.map(_ => trainer2.model.WordTestResults(word, TestType.Present3,
-                r.answers.filter(_.questionType == QuestionType.P3).map(convertAnswer)
-              ))
-            ).flatten :+ trainer2.model.WordTestResults(word, TestType.Translate,
-              r.answers.filter(_.questionType == QuestionType.TR).map(convertAnswer)
-            )
-          }
-        )
-      }
-      _ <- service2.saveState(newState)
-      _ <- service2.saveWords(newState.states.map(_.data))
-    } yield 0
-    }.orDie
+  override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] =
+    ZIO.effectTotal(Source.fromFile("verbs.tsv")).bracket(x => UIO(x.close()), { verbs =>
+      for {
+        _ <- Task {
+          Files.copy(new File("trainer_state_2.json").toPath, {
+            val file = new File(s"backup/trainer_state_2_${System.currentTimeMillis()}.json")
+            file.toPath
+          })
+          Files.copy(new File("trainer_words_2.json").toPath, {
+            val file = new File(s"backup/trainer_words_2_${System.currentTimeMillis()}.json")
+            file.toPath
+          })
+        }
+  //      words <- service2.loadWords("backup/trainer_words_2_1591341408055.json")
+        words <- service2.loadWords()
+        _ <- service2.saveWords((words ++ verbs.getLines().grouped(3)
+          .filterNot(x => words.exists(_.de == x.head))
+            .map {case Seq(de, ru, _) => WordData(
+              id = UUID.randomUUID().toString,
+              de = de,
+              ru = ru
+            )}
+          ).groupBy(_.id).mapValues(x => x.find(_.plural.isDefined).getOrElse(x.head)).values.toSeq)
+      } yield 0
+    }).orDie
 
   private def convertAnswer(a: Answer) = {
     trainer2.model.Answer(
