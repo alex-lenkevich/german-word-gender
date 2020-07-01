@@ -2482,8 +2482,8 @@
   },
   {
     "id" : "808c43dc-bc8f-4577-bf3e-785c45b578e4",
-    "de" : "zusammenziehener",
-    "ru" : "zusammenziehener",
+    "de" : "zusammenziehen",
+    "ru" : "сжимать, стягивать",
     "present3" : "zieht zusammen",
     "prateritum" : "zog zusammen",
     "perfekt" : "ist zusammen"
@@ -2930,7 +2930,8 @@
   {
     "id" : "f2a61776-4766-49e8-9aa2-6a34d709a280",
     "de" : "Regierung",
-    "ru" : "правительство"
+    "ru" : "правительство",
+    "kasus" : "M"
   },
   {
     "id" : "5fc20645-7d0e-4f19-950b-ec0218518537",
@@ -3177,8 +3178,8 @@
   },
   {
     "id" : "3521240e-b863-47e7-bf5d-1b377c6086e7",
-    "de" : "zusammenbleibener",
-    "ru" : "zusammenbleibener",
+    "de" : "zusammenbleiben",
+    "ru" : "остоваться вместе",
     "present3" : "bleibt zusammen",
     "prateritum" : "blieb zusammen",
     "perfekt" : "ist zusammen"
@@ -5303,7 +5304,8 @@
   {
     "id" : "f5f48a33-75c6-4b08-9c2c-28ba4788a66a",
     "de" : "Hausmeister",
-    "ru" : "1. смотритель дома или завхоз дома; 2. дво́рник "
+    "ru" : "1. смотритель дома или завхоз дома; 2. дво́рник ",
+    "kasus" : "M"
   },
   {
     "id" : "7cef4a99-a4e0-489e-839e-01142c79a2b3",
@@ -6142,7 +6144,8 @@
   {
     "id" : "b2f44d0a-bde7-43e9-976c-bcd6139fc2f4",
     "de" : "Recherche",
-    "ru" : "розыск; поиски; расследование"
+    "ru" : "розыск; поиски; расследование",
+    "kasus" : "F"
   },
   {
     "id" : "bb1e8e62-641d-472c-9fa0-72517986fa9f",
@@ -6744,7 +6747,7 @@
   {
     "id" : "ff24c28c-d333-4631-9257-0d556bf58f56",
     "de" : "wo",
-    "ru" : "хозяйственный орган; хозяйственная организация"
+    "ru" : "где"
   },
   {
     "id" : "da07c56a-7d39-4e48-aba2-ce1c8a9cd9d0",
@@ -7211,7 +7214,7 @@
   {
     "id" : "71ef7e12-7984-45bf-91b4-408c5893b035",
     "de" : "verwandt",
-    "ru" : "I part II от verwénden II a 1) родственный, состоящий в родственных отношения Er ist..."
+    "ru" : "родственный, состоящий в родственных отношения"
   },
   {
     "id" : "a810262c-5fd6-45b3-8058-366ab39e472d",
@@ -9518,7 +9521,7 @@
   {
     "id" : "9e8c125f-f07b-4e9d-90f9-120d6096cb37",
     "de" : "spitz",
-    "ru" : "шпиц"
+    "ru" : "острый"
   },
   {
     "id" : "60982916-5170-42ad-903c-6870533c7c80",
@@ -12482,7 +12485,8 @@
   {
     "id" : "a7b4ef89-0319-4e3c-88b3-e525b1620214",
     "de" : "Stimmung",
-    "ru" : "настроение"
+    "ru" : "настроение",
+    "kasus" : "F"
   },
   {
     "id" : "edc0c564-e38a-497c-b00c-009e10280975",
@@ -12626,7 +12630,7 @@
   {
     "id" : "97204445-52e7-4ca6-9385-930d96da9abc",
     "de" : "sauer",
-    "ru" : "закваска"
+    "ru" : "кислый"
   },
   {
     "id" : "de9525e9-5fef-4b5d-95ff-38de1d4c65f9",
@@ -13355,7 +13359,8 @@
   {
     "id" : "cbe76ef6-22c0-4b0d-89e9-be22b3940824",
     "de" : "Ernährung",
-    "ru" : "питание, кормление, вскармливание"
+    "ru" : "питание, кормление, вскармливание",
+    "kasus" : "F"
   },
   {
     "id" : "d7ddbb05-cb7d-4207-acdd-59630abcbe43",
@@ -14652,7 +14657,7 @@
   {
     "id" : "e177433a-e9c4-4ff6-89c7-a7dc0703cc97",
     "de" : "so",
-    "ru" : "верхняя грань головки рельса"
+    "ru" : "так"
   },
   {
     "id" : "2edf8dd0-59b1-459f-8f04-a65849252aed",
@@ -15404,8 +15409,8 @@
   },
   {
     "id" : "ab1b6729-0b4a-446f-a835-f7829245197b",
-    "de" : "zusammenbrechener",
-    "ru" : "zusammenbrechener",
+    "de" : "zusammenbrechen",
+    "ru" : "рушиться, рухнуть",
     "present3" : "bricht zusammen",
     "prateritum" : "brach zusammen",
     "perfekt" : "ist zusammen"
@@ -15688,7 +15693,8 @@
   {
     "id" : "c303df87-8123-423f-9db7-8dde08766092",
     "de" : "Speisekarte",
-    "ru" : "меню"
+    "ru" : "меню",
+    "kasus" : "F"
   },
   {
     "id" : "99275172-8eaf-42c4-9910-7684c1b24b76",
@@ -15753,7 +15759,8 @@
   {
     "id" : "2ad0d5ae-8694-4649-890a-176a09c25b29",
     "de" : "Sprechstunde",
-    "ru" : "приёмные часы"
+    "ru" : "приёмные часы",
+    "kasus" : "F"
   },
   {
     "id" : "ff73ec42-8967-49e3-bf6b-7f0d68bb3a7c",
@@ -17285,7 +17292,8 @@
   {
     "id" : "3074b99c-25f9-4f14-8400-37930c14aa04",
     "de" : "Schriftsteller",
-    "ru" : "писатель"
+    "ru" : "писатель",
+    "kasus" : "M"
   },
   {
     "id" : "e48c4b16-3993-4569-b71c-7ffd8c7bfcd4",
@@ -17798,7 +17806,7 @@
   {
     "id" : "a8fb996d-f36c-49ff-89f5-032e04762a2a",
     "de" : "schade",
-    "ru" : "a"
+    "ru" : "стыдный, досадный"
   },
   {
     "id" : "e5e0b733-4e5a-459e-9ffa-e92edd54f0d1",

@@ -35,6 +35,7 @@ object Main extends App with PonsAudioDownloader with StateService with LingvoCl
     case "+t" => Task(list.filter(_.testType == TestType.Translate) -> prevCommands)
     case "-a" => Task(list.filter(_.nextAsk.exists(_._2.timeHasCome())) -> prevCommands)
     case "-h" => Task(list.filter(_.state == Hard) -> prevCommands)
+    case "-eh" => Task(list.filter(s => s.answers.nonEmpty && BigDecimal(s.answers.count(_.isCorrect)) / s.answers.length < 0.33) -> prevCommands)
     case "-l" => Task(list.filter(_.state == Learning) -> prevCommands)
     case "-m" => Task(list.filter(_.state == InMemory) -> prevCommands)
     case "-n" => Task(list.filter(_.state == New) -> prevCommands)
@@ -45,9 +46,11 @@ object Main extends App with PonsAudioDownloader with StateService with LingvoCl
     case "-s" => Task(list.filter(_.shouldBeAsked) -> prevCommands)
     case "-t" => Task(list.filter(_.state == Temp) -> prevCommands)
     case "a" => UIO(list -> prevCommands) <* putStrLn(list.answersLine)
-    case "i" => UIO(list -> prevCommands) <* putStrLn(list.toString())
-    case "l" => (list.filter(_.shouldBeAsked) =>> runTest).map(_ -> (prevCommands :+ "i -a"))
-    case "l!" => UIO(list -> (prevCommands ++ Seq("l 20 -a", "l! -a").filter(_ => list.states.nonEmpty)))
+    case "i" => UIO(list -> prevCommands) <* putStrLn(list.sortBy(_.hardness.fold(BigDecimal(-2))(-_)).toString())
+    case "l" => (list.filter(_.shouldBeAsked) =>> runTest).map(_ -> (prevCommands :+ "i"))
+    case "la!" => UIO(list -> (prevCommands ++ Seq("l 20 -a", "la! -a").filter(_ => list.states.nonEmpty)))
+    case "ln!" => UIO(list -> (prevCommands ++ Seq("l 20 -n", "ln! -n").filter(_ => list.states.nonEmpty)))
+    case "l!" => UIO(list -> (prevCommands ++ Seq("", "l! -s").filter(_ => list.states.nonEmpty)))
     case "p" => UIO(list -> prevCommands) <* putStrLn(list.predictPlan)
     case "t" => UIO(list -> prevCommands) <* putStrLn(list.time)
     case DiffRegex(_, days) => UIO(list -> prevCommands) <* putStrLn(list.diff(if(days == "") 0 else days.toInt))
@@ -99,7 +102,7 @@ object Main extends App with PonsAudioDownloader with StateService with LingvoCl
         case (cmd, prev) => prev.flatMap { case (l, cmds) => execute(cmd)(l, cmds) }
       }
     newList = list ++ updatedWords
-    _ <- if(list != newList) saveState(newList) else ZIO.unit
+    _ <- saveState(newList).when(list != newList)
     _ <- makeSession(newList, commands.drop(1) ++ newCommands)
     n <- ZIO.never
   } yield n).catchSome {

@@ -33,14 +33,15 @@ object StateFixer extends App with StateService with LingvoClient with DudenClie
         }
   //      words <- service2.loadWords("backup/trainer_words_2_1591341408055.json")
         words <- service2.loadWords()
-        _ <- service2.saveWords((words ++ verbs.getLines().grouped(3)
-          .filterNot(x => words.exists(_.de == x.head))
-            .map {case Seq(de, ru, _) => WordData(
-              id = UUID.randomUUID().toString,
-              de = de,
-              ru = ru
-            )}
-          ).groupBy(_.id).mapValues(x => x.find(_.plural.isDefined).getOrElse(x.head)).values.toSeq)
+        _ <- putStrLn(words.filter(x => x.de.matches("^[A-ZÄÜÖ].*") && x.kasus.isEmpty).mkString("\n"))
+//        _ <- service2.saveWords((words ++ verbs.getLines().grouped(3)
+//          .filterNot(x => words.exists(_.de == x.head))
+//            .map {case Seq(de, ru, _) => WordData(
+//              id = UUID.randomUUID().toString,
+//              de = de,
+//              ru = ru
+//            )}
+//          ).groupBy(_.id).mapValues(x => x.find(_.plural.isDefined).getOrElse(x.head)).values.toSeq)
       } yield 0
     }).orDie
 

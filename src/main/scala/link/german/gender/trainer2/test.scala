@@ -30,7 +30,9 @@ object test {
       override def isSupported(word: WordData): Boolean = true
 
       override def options(word: WordData, list: Seq[WordData], n: Int): Seq[String] =
-        (list.map(_.de) :+ answer(word)).distinct.sortBy(s => LevenshteinDistance.getDefaultInstance()(answer(word), s)).take(n)
+        (list.map(answer) :+ answer(word)).distinct.sortBy(s => LevenshteinDistance.getDefaultInstance()(answer(word), s))
+          .take(n)
+          .sorted
     }
 
     case object KasusTestType extends TestType {

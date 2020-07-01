@@ -12,6 +12,7 @@ import link.german.gender.trainer2.test._
 import zio.ZIO
 
 import scala.collection.Seq
+import scala.math.BigDecimal.RoundingMode
 import scala.math.Ordering
 import scala.util.Random
 
@@ -77,10 +78,12 @@ object model {
         val duration = ChronoUnit.DAYS.between(LocalDate.now(), askDate.toLocalDate)
         if (askDate.timeHasCome())
           1d -> "Ready to repeat"
+        else if (askDate.timeHasCome(LocalDateTime.now().plusMinutes(15)))
+          1.1 -> "In 15 mins"
         else if (askDate.timeHasCome(LocalDateTime.now().plusHours(1)))
-          1.1 -> "In 1 hour"
+          1.2 -> "In 1 hour"
         else if (askDate.timeHasCome(LocalDateTime.now().plusHours(4)))
-          1.2 -> "In 4 hours"
+          1.3 -> "In 4 hours"
         else if (duration == 0)
           2d -> "Today"
         else if (duration == 1)
@@ -127,7 +130,8 @@ object model {
     def collect(f: PartialFunction[WordTestResults, WordTestResults]): WordList = WordList(states.collect(f))
 
     def active: WordList = this
-//      .filter(x => x.data.de.startsWith("abfliegen"))
+//      .filter(x => !x.data.de.matches(".*n( \\(sich\\))?$"))
+      .filter(x => x.testType == Translate)
       .filter(!_.data.de.contains("geeignet"))
       .filter(!_.data.de.contains("ehrlich"))
       .filter(!_.data.de.contains("geehrt"))
@@ -192,14 +196,17 @@ object model {
       if (answers.isEmpty) New
       else if (allCorrect && answers.forall(_.attempts.length <= 1)) Persistent
       else if (comboDuration.toDays >= 14 && combo.length >= 5) Persistent
-      else if (answers.length > 5 && effectiveCombo < 5 && comboDuration.toDays < 1) Hard
+      else if (answers.length > 5 && effectiveCombo < 5 && comboDuration.toHours < 2) Hard
       else if (combo.length >= 2 && comboDuration.toDays < 1) Temp
       else if (combo.length >= 2) InMemory
       else Learning
     }
 
     def nextAskDate: Option[LocalDateTime] = (state match {
-      case Persistent => Some(latest.date + 45.days)
+      case Persistent => Some(latest.date.toLocalDate
+        .plusDays(45)
+        .atStartOfDay()
+        .plusHours(5))
       case InMemory | Temp => Some(latest.date.toLocalDate
         .plusDays(comboDuration.toDays * 2 + 1)
         .atStartOfDay()
@@ -231,7 +238,7 @@ object model {
       case Learning => "0"
       case Temp => "1"
       case InMemory => "2"
-      case Hard => "3" + effectiveCombo.toString.padTo(4, ' ') + comboDuration.getSeconds.toString.padTo(20, ' ')
+      case Hard => "3" + hardness.toString.padTo(6, ' ') + effectiveCombo.toString.padTo(4, ' ') + comboDuration.getSeconds.toString.padTo(20, ' ')
       case New => "4" + testTypeOrder + wordOrder
       case Persistent => "5"
     }
@@ -270,6 +277,19 @@ object model {
       }
     }
 
+    lazy val answersSessions: Seq[(LocalDateTime, Boolean)] = sortedAnswers.foldLeft(Seq[(LocalDateTime, Boolean)]()){
+      case (seq :+ ((date, correct)), answer) if (answer.date - date).abs().minus(1.hours).isNegative =>
+        seq :+ date -> (correct && answer.correct)
+      case (seq, answer) =>
+        seq :+ answer.date -> answer.isCorrect
+    }
+
+    lazy val hardness: Option[BigDecimal] = if(answers.isEmpty) {
+      None
+    } else {
+      Some((BigDecimal(answersSessions.count(_._2)) / answersSessions.length).setScale(2, RoundingMode.HALF_UP))
+    }
+
     override def equals(obj: Any): Boolean = obj match {
       case that: WordTestResults => data.id == that.data.id && testType == that.testType
       case _ => false
@@ -280,6 +300,13 @@ object model {
       equals(that)
     }
 
+    override def toString: String = {
+      s"${answer.trim.grouped(20).map(_.padTo(20, ' ')).mkString(" |\n")} | ${question.replaceAll("[^0-9a-zA-Zа-яА-Я)(\\[\\]. ]", "").trim.grouped(40).map(_.padTo(40, ' ')).mkString(s" |\n${" "*21}| ")} | ${state.toString.padTo(10, ' ')} " +
+        s" | ${nextAskDate.fold("--")(_.pretty).padTo(4, ' ')}" +
+        s" | $effectiveCombo (${comboDuration.prettyShort.padTo(3, ' ')})" +
+        s" | -${latestSuccessOpt.fold("--")(t => (LocalDateTime.now() - t.date).prettyShort)}" +
+        s" | ${hardness.getOrElse(" -- ")}"
+    }
   }
 
   case class WordData(

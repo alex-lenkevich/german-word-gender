@@ -98,11 +98,10 @@ object ui {
           val correct = test.answer
           val answer = inputPanel.text
           val results = LevenshteinDetailedDistance.getDefaultInstance.apply(answer, correct)
-//          println(s"answer = $answer")
-//          println(s"results = $results")
-//          println(s"attempts = $attempts")
-          if (answer == "" || attempts.contains(answer)) {
+          if (answer == "") {
             // ignore
+          } else if (attempts.contains(answer)) {
+            hintPanel.text = s"Nein distance = ${results.getDistance}!"
           } else if (answer == "?") {
             gaveUp = true
             hintPanel.text = correct
@@ -113,7 +112,8 @@ object ui {
           } else if (answer == correct.replaceAll("(die|das|der) ", "")) {
             hintPanel.text = "Mit article"
           } else if (!gaveUp) {
-            hintPanel.text = s"# Nein (-${results.getDeleteCount} +${results.getInsertCount} ≠${results.getSubstituteCount})!"
+//            hintPanel.text = s"# Nein (-${results.getDeleteCount} +${results.getInsertCount} ≠${results.getSubstituteCount})!"
+            hintPanel.text = s"Nein distance = ${results.getDistance}!"
             attempts += answer
           } else {
             hintPanel.text = correct
@@ -190,8 +190,7 @@ object ui {
             hintPanel.text = test.answer
             wrong = true
           }
-        case a =>
-          println(a)
+        case _ =>
           selectListView.requestFocus
           selectListView.requestFocusInWindow()
       }
@@ -217,7 +216,6 @@ object StartWindow extends App {
   ), (4 -> 10))
   Window.contents = test.panel
   Window.visible = true
-  println(test.getAnswer)
   Window.dispose()
 }
 
@@ -230,6 +228,5 @@ object StartSelectWindow extends App {
   private val test = new SelectTest(word, TestType.KasusTestType.options(word.data, Seq(word.data), 6), (4 -> 10))
   Window.contents = test.panel
   Window.visible = true
-  println(test.getAnswer)
   Window.dispose()
 }

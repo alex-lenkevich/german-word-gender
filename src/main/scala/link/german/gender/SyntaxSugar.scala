@@ -79,6 +79,7 @@ object SyntaxSugar {
 
   implicit class DurationSyntaxSugar(date: Duration) {
 
+
     def prettyShort: String = {
       val days = date.toDays
       val hours = date.toHours
