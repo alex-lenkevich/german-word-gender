@@ -93,7 +93,7 @@ object Main extends App with PonsAudioDownloader with StateService with LingvoCl
   }
 
   def makeSession(list: FullWordList, commands: Seq[String]): TZIO[Int] = (for {
-    _ <- putStrLn("learn | learn hard | learn active | info | info hard | info session | info <word>")
+    _ <- putStrLn("+k | +p3 | +pp | +pr | +t | -a | -h | -eh | -l | -m | -n | -p | -p3 | -pp | -pr | -s | -t | a | i | l | la! | ln! | l! | p | t")
     command <- commands.headOption.fold(getStrLn)(UIO(_))
     (updatedWords, newCommands) <- command.split(" ")
       .foldRight[ZIO[zio.ZEnv, Throwable, (WordList, Seq[String])]](
