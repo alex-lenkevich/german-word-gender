@@ -3,7 +3,7 @@ package link.german.gender.trainer
 import java.io.FileWriter
 
 import io.circe.syntax._
-import link.german.gender.Dict02Parser.getArticle
+//import link.german.gender.Dict02Parser.getArticle
 import link.german.gender.trainer.model._
 import link.german.gender.SyntaxSugar._
 
@@ -44,7 +44,7 @@ object StateCreator extends App {
       )
     )
     .map { w =>
-      w.head.copy(name = getArticle(w.head).fold(w.head.name)(x => s"$x ${w.head.name}"),
+      w.head.copy(name = /*getArticle(w.head)*/None.fold(w.head.name)(x => s"$x ${w.head.name}"),
         translate = (w match {
           case Seq(x) => x.translate
           case translations =>

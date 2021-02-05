@@ -6,7 +6,7 @@ scalaVersion := "2.12.7"
 
 enablePlugins(JavaAppPackaging)
 
-mainClass in (Compile, run) := Some("link.german.gender.trainer.Main")
+mainClass in (Compile, run) := Some("link.german.gender.trainer2.Main")
 
 libraryDependencies ++= Seq(
   "org.mongodb.scala" %% "mongo-scala-driver" % "2.4.2",
