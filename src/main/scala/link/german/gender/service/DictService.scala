@@ -1,6 +1,6 @@
 package link.german.gender.service
 
-import link.german.gender.{LangenscheidtClient, WikiClient}
+import link.german.gender.client._
 
 import scala.concurrent.{ExecutionContext, Future}
 

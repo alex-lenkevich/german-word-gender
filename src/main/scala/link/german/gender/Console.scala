@@ -1,6 +1,6 @@
 package link.german.gender
 
-import link.german.gender.service.RouterService
+import link.german.gender.service.{GenderService, RouterService}
 
 import scala.concurrent.Future
 import scala.io.StdIn
@@ -15,7 +15,7 @@ object Console /*extends App */{
     val sendBack: String => Future[Unit] = msg => Future {
       println(msg)
     }
-    new RouterService().process(msg, sendBack).onComplete {
+    new GenderService().process(msg, sendBack).onComplete {
       case Success(value) =>
         println(s"Message processed $value")
       case Failure(err) =>

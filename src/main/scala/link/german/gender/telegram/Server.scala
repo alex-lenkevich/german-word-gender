@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
-import link.german.gender.service.RouterService
+import link.german.gender.service.{GenderService, RouterService}
 
 import scala.util.{Failure, Success}
 
@@ -16,7 +16,7 @@ object Server extends JsonSupport with App with ErrorAccumulatingCirceSupport {
   // needed for the future flatMap/onComplete in the end
   implicit val executionContext = system.dispatcher
   private val telegramClient = new Client()
-  private val servcieRouter = new RouterService()
+  private val servcieRouter = new GenderService()
 
   val route = (path("update") & post & entity(as[Update])) { update =>
     val word = update.message.text
