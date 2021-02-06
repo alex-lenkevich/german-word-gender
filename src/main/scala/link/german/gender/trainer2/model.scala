@@ -4,7 +4,6 @@ import java.time
 import java.time.temporal.ChronoUnit
 import java.time.{LocalDate, LocalDateTime}
 
-import link.german.gender.MongoDbClient.WordGender
 import link.german.gender.SyntaxSugar._
 import link.german.gender.trainer.model._
 import link.german.gender.trainer2.test.TestType.{KasusTestType, Translate}
@@ -318,7 +317,9 @@ object model {
     plural: Option[String] = None,
     genetiv: Option[String] = None,
     present3: Option[String] = None,
-    prateritum: Option[String] = None, perfekt: Option[String] = None) {
+    prateritum: Option[String] = None,
+    perfekt: Option[String] = None,
+    synonyme: Option[String] = None) {
 
     override def equals(obj: Any): Boolean = obj match {
       case that: WordState => id == that.id

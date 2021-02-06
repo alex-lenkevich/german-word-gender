@@ -1,12 +1,14 @@
 package link.german.gender.trainer2
 
-import java.util.UUID
+import link.german.gender.client.DudenClient
 
+import java.util.UUID
 import javax.swing.border.EmptyBorder
 import link.german.gender.trainer2.model._
 import link.german.gender.trainer2.test._
 import link.german.gender.trainer2.ui.{SelectTest, TextTest, Window}
 import org.apache.commons.text.similarity.LevenshteinDetailedDistance
+import zio.UIO
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -69,6 +71,15 @@ object ui {
       focusable = false
     }
 
+    val synonymePanel: TextPane = new TextPane() {
+      font = Font(Font.Monospaced, Font.Style.Plain, 24)
+      foreground = new Color(0xFFDEDEDE)
+      background = new Color(0xFF222222)
+      editable = false
+      text = test.data.synonyme.getOrElse("No synonyms")
+      focusable = false
+    }
+
     val hintPanel: TextPane = new TextPane() {
       font = Font(Font.Monospaced, Font.Style.Plain, 48)
       foreground = new Color(0xFFDEDEDE)
@@ -88,6 +99,7 @@ object ui {
     val panel: BoxPanel = new BoxPanel(Orientation.Vertical) {
       contents += progressbar
       contents += questionPanel
+      contents += synonymePanel
       contents += hintPanel
       contents += inputPanel
 

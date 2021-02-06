@@ -1,17 +1,15 @@
 package link.german.gender.trainer
 
-import java.io.File
-import java.nio.file.Files
-import java.util.UUID
-
+import link.german.gender.client.DudenClient
 import link.german.gender.trainer.model.Answer
 import link.german.gender.trainer2.enums.AnswerType
-import link.german.gender.trainer2.model.WordData
 import link.german.gender.trainer2.test.TestMethod
-import link.german.gender.{DudenClient, LingvoClient, trainer2}
+import link.german.gender.{LingvoClient, trainer2}
 import zio._
 import zio.console._
 
+import java.io.File
+import java.nio.file.Files
 import scala.io.Source
 
 object StateFixer extends App with StateService with LingvoClient with DudenClient {

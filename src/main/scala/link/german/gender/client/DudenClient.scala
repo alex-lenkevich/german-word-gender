@@ -1,10 +1,9 @@
 package link.german.gender.client
 
 import java.net.URL
-
 import org.htmlcleaner.HtmlCleaner
 import org.jsoup.Jsoup
-import zio._
+import zio.{Task, _}
 import zio.console._
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -47,6 +46,13 @@ trait DudenClient {
       val genetiv = grammatik("Genitiv")
       genetiv -> plural
     }
+  }
+
+  def dudenRequestSynonym(word: String): Task[String] = Task {
+
+    val url = Jsoup.connect(s"https://www.duden.de/suchen/dudenonline/${word}").get.body.selectFirst("a.vignette__label").attr("href")
+    val doc = Jsoup.connect(s"https://www.duden.de$url").get
+    doc.body().select("#synonyme > ul > li").text()
   }
 
 }
